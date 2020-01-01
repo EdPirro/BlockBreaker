@@ -1,3 +1,4 @@
+// Game options definitions.
 const colors = ['#ff0000', '#0000ff', '#ffff00', '#00ff00', ' #666699',  '#ff00ff'];
 
 const board = document.getElementById('board');
@@ -12,8 +13,17 @@ boardSize += blockNum * 2 * blockBorder;
 const blockInfo = [];
 const blockThreshold = 2;
 
-let score = 0;
+// end of game options
 
+// Game control variables
+const checkQueue = [];
+let score = 0;
+let moves = 0;
+let clicked = -1;
+
+// end of game control variables
+
+// Initializing board
 Object.assign(document.getElementById('main').style, {
     display :   'flex',
     alignItems: 'center',
@@ -27,10 +37,12 @@ const style = {
 };
 
 Object.assign(board.style, style);
+// end of board initializaion
 
-
-let clicked = -1;
-
+/**
+ * Simple funtion to get top and left positions (a numbers) off of a HTMLElement
+ * @param {HTMLElement} elem 
+ */
 function getTopLeftNum(elem){
     const topString = elem.style.top;
     const leftString = elem.style.left;
@@ -39,8 +51,10 @@ function getTopLeftNum(elem){
     return [top, left];
 }
 
-
-
+/**
+ * A mouse over handler to make the block under the cursor to be a little bigger
+ * @param {Event} e 
+ */
 function mouseOverHandle(e) {
     if(clicked === Number(e.target.id)) return;
     target = e.target;
@@ -53,6 +67,10 @@ function mouseOverHandle(e) {
     target.style.zIndex = '2';
 }
 
+/**
+ * Helping function that makes a element the "normal" size
+ * @param {HTMLElement} elem 
+ */
 function normalSize(elem){
     elem.style.height = `${blockSize}px`,
     elem.style.width = `${blockSize}px`;
@@ -62,6 +80,10 @@ function normalSize(elem){
     elem.style.zIndex = '0';
 }
 
+/**
+ * Simple mouse out handler to make the block under the cursor "normal" size
+ * @param {Event} e 
+ */
 function mouseOutHandle(e) {
     if(clicked === Number(e.target.id)) return;
     if(clicked === -2) {
@@ -71,13 +93,24 @@ function mouseOutHandle(e) {
     normalSize(e.target);
 }
 
+/**
+ * Function that lets the player unselet a former selected block    
+ * @param {HTMLElement} elem 
+ */
 function unClick(elem) {
     elem.style.borderColor = '#000000';
     elem.style.zIndex = '0';
     clicked = -2;
 }
 
-function checkSC(index, relPos, step, valid) {
+/**
+ * Checks how many blocks the same color of the index one is in the specified direction
+ * @param {number} index 
+ * @param {string} relPos 
+ */
+function checkSC(index, relPos) {
+    let step;
+    let valid;
     if(relPos === 'left') {
         step = (x) => x - 1;
         valid = (x, y) => {
@@ -96,7 +129,7 @@ function checkSC(index, relPos, step, valid) {
     } else if(relPos === 'down') {
         step = (x) => x + blockNum;
         valid = (x) => x < (blockNum * blockNum);
-    }
+    } else return -1; // not a valid direction (at least for now)
     const color = blockInfo[index].color;
     let i = step(index);
     let count = 0;
@@ -110,6 +143,11 @@ function checkSC(index, relPos, step, valid) {
     return count;  
 }
 
+/**
+ * Awards points based on the combination made
+ * @param {string} combination 
+ * @param {number} amount 
+ */
 function awardPoints(combination, amount){
     if(combination === "line") {
         if(amount === blockThreshold + 1) score += 10;   // 10 point for a line 1 block bigger than the threshold
@@ -120,6 +158,10 @@ function awardPoints(combination, amount){
     scoreDiv.innerHTML = `Current Score:<br/>${score}`;
 }
 
+/**
+ * Uses the results of checkSC(...) to check if any (or wich) blocks should be destructed
+ * @param {number} id 
+ */
 function checkDestroy(id) {
     const ret = [];
     let [left, right, up, down] = [checkSC(id, 'left'), checkSC(id, 'right'), checkSC(id, 'up'), checkSC(id, 'down')];
@@ -140,6 +182,12 @@ function checkDestroy(id) {
     return [null, null];
 }
 
+/**
+ * Animates all blocks indexed by numbers on the Array 'list' and returns the last 
+ * animation created (given that when the last animation created ends the whole 
+ * animation process ended).s
+ * @param {number[]} list 
+ */
 function animateDestroyBlocks(list) {
     let lastAnimation;
     for(blockId of list){
@@ -162,12 +210,21 @@ function animateDestroyBlocks(list) {
     return lastAnimation;
 }
 
-function destroyBlocks(toDestroy){
-    for(i of toDestroy) document.getElementById(`${i}`).remove();
+/**
+ * Actually destroys every div indexed by the numbers in the list removing them from the
+ * html.
+ * @param {number[]} list 
+ */
+function destroyBlocks(list){
+    for(i of list) document.getElementById(`${i}`).remove();
     return;
 }
 
-
+/**
+ * Function to shift two blocks position (probably more complicated than it needed to be...
+ * but it works).
+ * @param {number[]} list 
+ */
 async function shiftBlocks(list) {
     return new Promise((res, rej) => {
         try{
@@ -196,6 +253,15 @@ async function shiftBlocks(list) {
     })
 }
 
+/**
+ * Simple function to help create and stylize divs
+ * @param {number} id 
+ * @param {string} color 
+ * @param {number} height 
+ * @param {number} width 
+ * @param {number} top 
+ * @param {number} left 
+ */
 function createDiv(id, color, height, width, top, left) {
     const newDiv = document.createElement('div');
     const tempStyle = {
@@ -218,6 +284,10 @@ function createDiv(id, color, height, width, top, left) {
     return newDiv;
 }
 
+/**
+ * Creates (and animate this creation) the blocks whose ids are in 'list'
+ * @param {number[]} list 
+ */
 function createAndAnimateBlocks(list) {
     let lastAnimation;
     for(const blockId of list) {
@@ -244,6 +314,7 @@ function createAndAnimateBlocks(list) {
     return lastAnimation;
 }
 
+/** */
 function moveAndAnimateBlocks(list) {
     if(!list || !list.length) return null;
     let lastAnimation;
@@ -267,75 +338,61 @@ function moveAndAnimateBlocks(list) {
     return lastAnimation;
 }
 
-// function moveBlocks(toMove){
-//     for(const moveRule of toMove) {
-//         const div = document.getElementById(`${moveRule.fom}`);
-//         div.id = moveRule.to;
-//         div.style.top = blockInfo[moveRule.to].top + "px";
-//         div.style.left = blockInfo[moveRule.to].left + "px";
-//         blockInfo[moveRule.to].color = blockInfo[moveRule.from].color;
-//     }
-// }
-
-async function controlDestruction(index) { 
-    return new Promise( async (res, rej) => {
-        let [toDestroy, axis] = checkDestroy(index);
-        if(!toDestroy) return res(); // don't have to destroy anything
-        const toMove = [];
-        const toCreate = [];
-        if(axis === 'x') {
-            let row = Math.floor(toDestroy[0] / blockNum);
-            // Creates the top row blocks
-            for(const i of toDestroy) toCreate.push(i - blockNum * row);
-            for(let mul = 0; mul < row; mul++) { //there is at least a row above the destructed one to be moved down
-                for(const i of toDestroy) {
-                    const id = i - (blockNum * (mul + 1));
-                    toMove.push({from: id, to: id + blockNum});
-                }
+function controlDestruction() { 
+    if(!checkQueue.length) return;
+    const index = checkQueue.shift();
+    let [toDestroy, axis] = checkDestroy(index);
+    if(!toDestroy) return controlDestruction(); // don't have to destroy anything this iteraton
+    const toMove = [];
+    const toCreate = [];
+    if(axis === 'x') {
+        let row = Math.floor(toDestroy[0] / blockNum);
+        // Creates the top row blocks
+        for(const i of toDestroy) toCreate.push(i - blockNum * row);
+        for(let mul = 0; mul < row; mul++) { //there is at least a row above the destructed one to be moved down
+            for(const i of toDestroy) {
+                const id = i - (blockNum * (mul + 1));
+                toMove.push({from: id, to: id + blockNum});
             }
-        } else if(axis === 'y') {
-            let col = toDestroy[0] % blockNum;
-            // lists the blocks that will be created
-            for(const i in toDestroy) toCreate.push(col + i * blockNum);
-            let mul = 1;
-            let id;
-            // gets every block in the sabe column that whill be moved down
-            while((id = (toDestroy[0] - (blockNum * (mul++)))) >= 0) 
-                toMove.push({from: id, to: id + toDestroy.length * blockNum});
         }
+    } else if(axis === 'y') {
+        let col = toDestroy[0] % blockNum;
+        // lists the blocks that will be created
+        for(const i in toDestroy) toCreate.push(col + i * blockNum);
+        let mul = 1;
+        let id;
+        // gets every block in the sabe column that whill be moved down
+        while((id = (toDestroy[0] - (blockNum * (mul++)))) >= 0) 
+            toMove.push({from: id, to: id + toDestroy.length * blockNum});
+    }
 
-        // destroyBlocks(toDestroy); // destroys the listed blocks
-        // moveBlocks(toMove); // moves the listed blocks
-        // createBlocks(toCreate); // created the listed blocks
-        try{
-            await (async () => new Promise((res, rej) => {
-                const destroyLA = animateDestroyBlocks(toDestroy);
-                destroyLA.onfinish = () => {
-                    destroyBlocks(toDestroy);
-                    const moveLA = moveAndAnimateBlocks(toMove);
-                    if(!moveLA) {
-                        const createLA = createAndAnimateBlocks(toCreate);
-                        createLA.onfinish = () => {
-                            return res();
-                        };
-                    } else {
-                        moveLA.onfinish = () => {
-                            // moveBlocks(toMove);
-                            const createLA = createAndAnimateBlocks(toCreate);
-                            createLA.onfinish = () => {
-                                return res();
-                            };
-                        };
-                    }
+    for(const rule of toMove) checkQueue.push(rule.to);
+    for(const elem of toCreate) checkQueue.push(elem);
+    // destroyBlocks(toDestroy); // destroys the listed blocks
+    // moveBlocks(toMove); // moves the listed blocks
+    // createBlocks(toCreate); // created the listed blocks
+    try{
+        const destroyLA = animateDestroyBlocks(toDestroy);
+        destroyLA.onfinish = () => {
+            destroyBlocks(toDestroy);
+            const moveLA = moveAndAnimateBlocks(toMove);
+            if(!moveLA) {
+                const createLA = createAndAnimateBlocks(toCreate);
+                createLA.onfinish = () => {
+                    return controlDestruction();
                 };
-            }))();
-        } catch (e) { 
-            console.log(e);
-            rej(e);
-        }
-        for(const elem of toMove) await controlDestruction(elem.to);
-        for(const elem of toCreate) await controlDestruction(elem);
-    });
+            } else {
+                moveLA.onfinish = () => {
+                    const createLA = createAndAnimateBlocks(toCreate);
+                    createLA.onfinish = () => {
+                        return controlDestruction();
+                    };
+                };
+            }
+        };
+    } catch (e) { 
+        console.log(e);
+    }
 }
 
 function changeElemPos(aElem, bElem, time) {
@@ -372,8 +429,10 @@ function clickHandle(e) {
         unClick(document.getElementById(String(clicked)));
         if(id === tempClicked + 1 || id === tempClicked - 1 || id === tempClicked + blockNum || id === tempClicked - blockNum) {
             changeElemPos(document.getElementById(String(tempClicked)), e.target, transitionTime);
-            controlDestruction(id);
-            controlDestruction(tempClicked);
+            checkQueue.push(id);
+            checkQueue.push(tempClicked);
+            console.log(checkQueue.length);
+            if(checkQueue.length === 2) controlDestruction();
             return;
         } 
 

@@ -232,39 +232,6 @@ function destroyBlocks(list){
 }
 
 /**
- * Function to shift two blocks position (probably more complicated than it needed to be...
- * but it works).
- * @param {number[]} list 
- */
-async function shiftBlocks(list) {
-    return new Promise((res, rej) => {
-        try{
-            const divs = [];
-            for(let shiftRule of list) divs.push(document.getElementById(`${shiftRule.from}`));
-            for(let index = divs.length - 1; index >= 0; index--) {
-                divs[index].style.setProperty('transition', `all ${transitionTime}s`);
-                divs[index].style.top = blockInfo[list[index].to].top + 'px';
-                divs[index].style.left = blockInfo[list[index].to].left + 'px';
-                divs[index].id = `${list[index].to}`;
-
-            }
-            setTimeout(() => {
-                try{
-                    for(div of divs) div.style.removeProperty('transition');
-                    res();
-                } catch(e) {
-                    console.log(e);
-                    rej(e);
-                }
-            }, transitionTime * 1000);
-        } catch(e) {
-            console.log(e);
-            rej(e);
-        }
-    })
-}
-
-/**
  * Simple function to help create and stylize divs
  * @param {number} id 
  * @param {string} color 
@@ -483,6 +450,9 @@ function clickHandle(e) {
     }
 }
 
+/**
+ * Erases every block from the board and creates new ones
+ */
 function reset() {
     score = 0;
     moves = 0;
@@ -492,7 +462,10 @@ function reset() {
     init();
 }
 
-
+/**
+ * Checks wether there are animations to be finished (or better saying, changes to be checked)
+ * and if isn't it calls the reset function.
+ */
 function checkReset() {
     if(checkQueue.length) {
         return alert("Could not reset :( , wait untill all ongoing changes end and try again.");
@@ -502,7 +475,11 @@ function checkReset() {
     stopChanges = false;
 }
 
-
+/**
+ * hecks wether there are animations to be finished (or better saying, changes to be checked)
+ * and if isn't it calls the reset function and proceeds to change the game mode.
+ * @param {Event} e 
+ */
 function changeMode(e) {
     if(checkQueue.length) {
         return alert("Could not change mode :( , wait untill all ongoing changes end and try again.")

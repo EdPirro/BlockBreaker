@@ -2,7 +2,11 @@
 const colors = ['#ff0000', '#0000ff', '#ffff00', '#00ff00', ' #666699',  '#ff00ff'];
 
 const board = document.getElementById('board');
+const hScoreDiv = document.getElementById('hScore');
 const scoreDiv = document.getElementById('score');
+const movesDiv = document.getElementById('moves');
+const modeBut = document.getElementById('mode');
+const resetBut = document.getElementById('reset');
 
 const blockNum = 10;
 const blockBorder = 2;
@@ -16,10 +20,13 @@ const blockThreshold = 2;
 // end of game options
 
 // Game control variables
-const checkQueue = [];
+let challangeMode = false;
+let checkQueue = [];
 let score = 0;
 let moves = 0;
+let highScore = 0;
 let clicked = -1;
+let stopChanges = false;
 
 // end of game control variables
 
@@ -27,8 +34,9 @@ let clicked = -1;
 Object.assign(document.getElementById('main').style, {
     display :   'flex',
     alignItems: 'center',
-    justifyContent: 'space-around'
-})
+    justifyContent: 'space-evenly',
+    marginLeft: '100px'
+});
 
 const style = {
     height  :   `${boardSize}px`,
@@ -38,6 +46,9 @@ const style = {
 
 Object.assign(board.style, style);
 // end of board initializaion
+
+modeBut.onclick = changeMode;
+resetBut.onclick = checkReset;
 
 /**
  * Simple funtion to get top and left positions (a numbers) off of a HTMLElement
@@ -86,10 +97,6 @@ function normalSize(elem){
  */
 function mouseOutHandle(e) {
     if(clicked === Number(e.target.id)) return;
-    if(clicked === -2) {
-        clicked = -1;
-        return;
-    }
     normalSize(e.target);
 }
 
@@ -100,7 +107,7 @@ function mouseOutHandle(e) {
 function unClick(elem) {
     elem.style.borderColor = '#000000';
     elem.style.zIndex = '0';
-    clicked = -2;
+    clicked = -1;
 }
 
 /**
@@ -156,6 +163,10 @@ function awardPoints(combination, amount){
         else if(amount >= blockThreshold + 4) score += 100; // 100 points for a line 4 or more blocks bigger than the threshold
     }
     scoreDiv.innerHTML = `Current Score:<br/>${score}`;
+    if(challangeMode && score > highScore) {
+        highScore = score;
+        hScoreDiv.innerHTML = `High Score: <br/> ${highScore}`;
+    }
 }
 
 /**
@@ -314,7 +325,10 @@ function createAndAnimateBlocks(list) {
     return lastAnimation;
 }
 
-/** */
+/**
+ * Moves (and animate this movement) the blocks whose ids are in 'list'
+ * @param {number[]} list 
+ */
 function moveAndAnimateBlocks(list) {
     if(!list || !list.length) return null;
     let lastAnimation;
@@ -338,11 +352,19 @@ function moveAndAnimateBlocks(list) {
     return lastAnimation;
 }
 
-function controlDestruction() { 
-    if(!checkQueue.length) return;
+/**
+ * Main function to control all processes of destruction, moving, and creating of blocks.
+ * To better controll concurrent changes, every block moved or created is pushed into a 
+ * queue, and the function calls itself "recursively" (but not actually because it is called
+ * from the Animation's 'onfinish' event and by that time the first instance of controlChange 
+ * would even already be over) untill this queue empties.
+ * @returns {void}
+ */
+function controlChanges() { 
+    if(!checkQueue.length || stopChanges) return;
     const index = checkQueue.shift();
     let [toDestroy, axis] = checkDestroy(index);
-    if(!toDestroy) return controlDestruction(); // don't have to destroy anything this iteraton
+    if(!toDestroy) return controlChanges(); // don't have to destroy anything this iteraton
     const toMove = [];
     const toCreate = [];
     if(axis === 'x') {
@@ -368,9 +390,6 @@ function controlDestruction() {
 
     for(const rule of toMove) checkQueue.push(rule.to);
     for(const elem of toCreate) checkQueue.push(elem);
-    // destroyBlocks(toDestroy); // destroys the listed blocks
-    // moveBlocks(toMove); // moves the listed blocks
-    // createBlocks(toCreate); // created the listed blocks
     try{
         const destroyLA = animateDestroyBlocks(toDestroy);
         destroyLA.onfinish = () => {
@@ -379,13 +398,13 @@ function controlDestruction() {
             if(!moveLA) {
                 const createLA = createAndAnimateBlocks(toCreate);
                 createLA.onfinish = () => {
-                    return controlDestruction();
+                    return controlChanges(); // calls controlChanges back to run up untill the que empties
                 };
             } else {
                 moveLA.onfinish = () => {
                     const createLA = createAndAnimateBlocks(toCreate);
                     createLA.onfinish = () => {
-                        return controlDestruction();
+                        return controlChanges(); // calls controlChanges back to run up untill the que empties
                     };
                 };
             }
@@ -393,15 +412,21 @@ function controlDestruction() {
     } catch (e) { 
         console.log(e);
     }
+    return;
 }
 
-function changeElemPos(aElem, bElem, time) {
+/**
+ * Change position of two Blocks... that's pretty much it.
+ * @param {HTMLElement} aElem 
+ * @param {HTMLElement} bElem 
+ */
+function changeElemPos(aElem, bElem) {
     normalSize(bElem);
     normalSize(aElem);
     const [aTop, aLeft] = getTopLeftNum(aElem);
     const [bTop, bLeft] = getTopLeftNum(bElem);
-    aElem.style.setProperty('transition', `all ${time}s`);
-    bElem.style.setProperty('transition', `all ${time}s`);
+    aElem.style.setProperty('transition', `all ${transitionTime}s`);
+    bElem.style.setProperty('transition', `all ${transitionTime}s`);
     aElem.style.top = bTop + 'px';
     aElem.style.left = bLeft + 'px';
     bElem.style.top = aTop + 'px';
@@ -409,15 +434,23 @@ function changeElemPos(aElem, bElem, time) {
     setTimeout(() => {
         bElem.style.removeProperty('transition');
         aElem.style.removeProperty('transition');
-    }, time * 1000);
+    }, transitionTime * 1000);
     [aElem.id, bElem.id] = [bElem.id, aElem.id];
     aId = Number(aElem.id);
     bId = Number(bElem.id);
     [blockInfo[aId].color, blockInfo[bId].color] = [blockInfo[bId].color, blockInfo[aId].color];
 }
 
+/**
+ * Function to control what clicking do.
+ * if nothing was clicked (clicked = -1) the current is selected*
+ * if the clicked block is the one selected it is unselected
+ * if there is a selected one and it is different than the target they change places
+ * 
+ * * selected block has a higher z-index and a white border
+ * @param {Event} e 
+ */
 function clickHandle(e) {
-    if(clicked === -2) return;
     mouseOutHandle(e);
     const id = Number(e.target.id) 
     if(id === clicked) {
@@ -428,11 +461,17 @@ function clickHandle(e) {
         tempClicked = clicked;
         unClick(document.getElementById(String(clicked)));
         if(id === tempClicked + 1 || id === tempClicked - 1 || id === tempClicked + blockNum || id === tempClicked - blockNum) {
-            changeElemPos(document.getElementById(String(tempClicked)), e.target, transitionTime);
+            if(challangeMode) 
+                scoreDiv.innerHTML = `CurrentScore: <br/>${score -= moves}`;
+            moves++;
+            movesDiv.innerHTML = `Moves made: <br/>${moves}`;
+            changeElemPos(document.getElementById(String(tempClicked)), e.target);
             checkQueue.push(id);
             checkQueue.push(tempClicked);
             console.log(checkQueue.length);
-            if(checkQueue.length === 2) controlDestruction();
+
+            //if the queue was empty priror to the pushes then it must begin the function chain
+            if(checkQueue.length === 2) controlChanges(); 
             return;
         } 
 
@@ -444,42 +483,79 @@ function clickHandle(e) {
     }
 }
 
+function reset() {
+    score = 0;
+    moves = 0;
+    scoreDiv.innerHTML = `Current Score: <br/>0`;
+    movesDiv.innerHTML = `Moves Made: <br/>0`;
+    for(let i = 0; i < blockNum * blockNum; i++) document.getElementById(`${i}`).remove();
+    init();
+}
 
-for(let i = 0; i < blockNum; i++) 
-    for(let j = 0; j < blockNum; j++){
-        let colorId = Math.floor(Math.random() * colors.length);
-        let color = colors[colorId];
-        const id = i * blockNum + j;
-        blockInfo[id] = {
-            top     :   i * (blockSize + 2 * blockBorder),
-            left    :   j * (blockSize + 2 * blockBorder),
-            color   :   color
-        };
-        while(checkSC(id, 'left') >= blockThreshold || checkSC(id, 'up') >= blockThreshold) {
-            colorId = (colorId + 1) % colors.length;
-            color = colors[colorId];
-            blockInfo[id].color = color;
-        };
-        const tempStyle = {
-            position        :   'absolute',
-            height          :   `${blockSize}px`,
-            width           :   `${blockSize}px`,
-            top             :   `${i * (blockSize + 2 * blockBorder)}px`,
-            left            :   `${j * (blockSize + 2 * blockBorder)}px`,
-            backgroundColor :   color,
-            borderColor     :   '#000000',
-            borderWidth      :   `${blockBorder}px`,
-            borderStyle     :   'solid',
-            zIndex          :    '0'
-        };
-        const temp = document.createElement('div');
-        Object.assign(temp.style, tempStyle);
-        temp.id = id;
-        temp.onmouseover = mouseOverHandle;
-        temp.onmouseout = mouseOutHandle;
-        temp.onclick = clickHandle;
-        board.append(temp);
+
+function checkReset() {
+    if(checkQueue.length) {
+        return alert("Could not reset :( , wait untill all ongoing changes end and try again.");
     }
+    stopChanges = true;
+    reset();
+    stopChanges = false;
+}
 
+
+function changeMode(e) {
+    if(checkQueue.length) {
+        return alert("Could not change mode :( , wait untill all ongoing changes end and try again.")
+    }
+    stopChanges = true;
+    reset();
+    challangeMode = !challangeMode;
+    if(challangeMode) e.target.innerHTML = "Casual Mode";
+    else e.target.innerHTML = "Challange Mode";
+    stopChanges = false;    
+}
+
+/**
+ * Initializes the board
+ */
+function init() {
+    for(let i = 0; i < blockNum; i++) 
+        for(let j = 0; j < blockNum; j++){
+            let colorId = Math.floor(Math.random() * colors.length);
+            let color = colors[colorId];
+            const id = i * blockNum + j;
+            blockInfo[id] = {
+                top     :   i * (blockSize + 2 * blockBorder),
+                left    :   j * (blockSize + 2 * blockBorder),
+                color   :   color
+            };
+            while(checkSC(id, 'left') >= blockThreshold || checkSC(id, 'up') >= blockThreshold) {
+                colorId = (colorId + 1) % colors.length;
+                color = colors[colorId];
+                blockInfo[id].color = color;
+            };
+            const tempStyle = {
+                position        :   'absolute',
+                height          :   `${blockSize}px`,
+                width           :   `${blockSize}px`,
+                top             :   `${i * (blockSize + 2 * blockBorder)}px`,
+                left            :   `${j * (blockSize + 2 * blockBorder)}px`,
+                backgroundColor :   color,
+                borderColor     :   '#000000',
+                borderWidth      :   `${blockBorder}px`,
+                borderStyle     :   'solid',
+                zIndex          :    '0'
+            };
+            const temp = document.createElement('div');
+            Object.assign(temp.style, tempStyle);
+            temp.id = id;
+            temp.onmouseover = mouseOverHandle;
+            temp.onmouseout = mouseOutHandle;
+            temp.onclick = clickHandle;
+            board.append(temp);
+        }
+}
+
+init();
 
 

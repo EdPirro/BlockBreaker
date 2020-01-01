@@ -176,14 +176,23 @@ function awardPoints(combination, amount){
 function checkDestroy(id) {
     const ret = [];
     let [left, right, up, down] = [checkSC(id, 'left'), checkSC(id, 'right'), checkSC(id, 'up'), checkSC(id, 'down')];
-    if(left + right >= blockThreshold) {
+    let sumX = left + right;
+    let sumY = up + down;
+
+    //if a line can be made with any direction the function chooses the bigger line
+    if(sumX >= blockThreshold && sumY >= blockThreshold) {
+        // making the sumX 0 here will consider the y-axis as solution
+        // not changing it will consider the x-axis as solution due to the function flow
+        if(sumY > sumX) sumX = 0; 
+    }
+    if(sumX >= blockThreshold){
         awardPoints('line', left + right + 1);
         while(left) ret.push(id - (left--));
         ret.push(id);
         for(let i = 0; i < right; i++) ret.push(id + i + 1);
         return [ret, 'x'];
     }
-    if(up + down >= blockThreshold) {
+    if(sumY >= blockThreshold) {
         awardPoints('line', up + down + 1);
         while(up) ret.push(id - blockNum * up--);
         ret.push(id);

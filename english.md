@@ -27,7 +27,6 @@ Block Breaker features two different game modes. Upon loading the game you start
 | :-------: | :-------:  |
 |Points don't count towards High Score | Points count towards High Score |
 |No points are lost | Every turn you lose points<sup>2 |
-|||
 
 <sub><sup>1: You wont be able to change modes if any animation is on going, when you change game modes the game is resetted. <br/>
 2: The amount of points lost each turn is the number of moves you've done since.</sup></sub>

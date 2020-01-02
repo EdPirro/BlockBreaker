@@ -46,4 +46,4 @@ The project is licensed under the [MIT license](LICENSE).
 Repository
 ----------
 
-[Back to the repository page.](github.com/EdPirro/$project)
+[Back to the repository page.](https://github.com/EdPirro/BlockBreaker)

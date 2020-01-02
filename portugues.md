@@ -27,7 +27,6 @@ Existem 2 modos distintos de jogo em Block Breaker. Ao iniciar o jogo voce come�
 | :-------: | :-------:  |
 |Pontos não contam pro High Score | Pontos contam pro High Score |
 |Nenhum ponto é perdido | A todo turno você perde pontos<sup>2 |
-|||
 
 <sub><sup>1: Você não pode mudar de modo de jogo enquanto alguma animação estiver acontecendo, ao mudar o modo de jogo ele será resetado. <br/>
 2: A quantidade de pontos deduzida a cada turno é igual a quantidade de movimentos que foram feitos ate ele.</sup></sub>
@@ -45,4 +44,4 @@ Esse projeto é licenciado pela [licença MIT](LICENSE) (em inglês).
 Repositório
 -----------
 
-[Voltar à pagina do repositiório.](github.com/EdPirro/$project)
+[Voltar à pagina do repositiório.](https://github.com/EdPirro/BlockBreaker)

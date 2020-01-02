@@ -160,7 +160,7 @@ function awardPoints(combination, amount){
         if(amount === blockThreshold + 1) score += 10;   // 10 point for a line 1 block bigger than the threshold
         else if(amount === blockThreshold + 2) score += 30;// 30 points for a line 2 blocks bigger than the threshold
         else if(amount === blockThreshold + 3) score += 50;// 50 points for a line 3 blocks bigger than the threshold
-        else if(amount >= blockThreshold + 4) score += 100; // 100 points for a line 4 or more blocks bigger than the threshold
+        else if(amount >= blockThreshold + 4) score += 100; // 100 points for a line 4 or more blocks bigger than the threshold (impossible with a threshold of 2)
     }
     scoreDiv.innerHTML = `Current Score:<br/>${score}`;
     if(challangeMode && score > highScore) {
